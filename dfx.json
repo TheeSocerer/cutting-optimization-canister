@@ -2,16 +2,16 @@
   "canisters": {
     "message_board": {
       "type": "custom",
-      "main": "src/index.ts",
-      "candid": "src/index.did",
+      "main": "src/cutter.ts",
+      "candid": "src/cutter.did",
       "candid_gen": "http",
-      "build": "npx azle message_board",
-      "wasm": ".azle/message_board/message_board.wasm",
+      "build": "npx azle cutting_optimization",
+      "wasm": ".azle/cutting_optimization/cutting_optimization.wasm",
       "gzip": true,
       "metadata": [
         {
             "name": "candid:service",
-            "path": "src/index.did"
+            "path": "src/cutter.did"
         },
         {
             "name": "cdk:name",
