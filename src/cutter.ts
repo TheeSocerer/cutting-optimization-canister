@@ -6,6 +6,11 @@ import express from 'express';
 
 
 class PiecePrice {
+    /**
+     * Represents the price information for a material piece.
+     * @param {string} materialTypeId - The ID of the material type.
+     * @param {{ size: number; price: number }[]} prices - The array of size and price objects.
+     */
     id:string;
     materialTypeId: string;
     createdAt: Date;
@@ -18,7 +23,13 @@ class PiecePrice {
         this.createdAt = getCurrentDate();
     }
 
-    // Method to update the price for a specific size
+    /**
+     * Updates the price for a specific size.
+     * @param {number} size - The size of the piece.
+     * @param {number} price - The new price for the specified size.
+     * @param {boolean} tag - Flag indicating if a new price entry should be added.
+     * @returns {boolean} - True if the price was updated or added, otherwise false.
+     */
     updatePrice(size: number, price: number, tag:boolean): boolean {
         if(tag){
            this.prices.push({size,price});
@@ -34,6 +45,11 @@ class PiecePrice {
 }
 
 class MaterialType {
+    /**
+     * Represents a material type.
+     * @param {string} name - The name of the material type.
+     * @param {string} description - The description of the material type.
+     */
     id: string;
     name:string;
     description: string;
@@ -46,7 +62,6 @@ class MaterialType {
     }
 }
 
-
 const MaterialTypeStorage = StableBTreeMap<string, MaterialType>(0);
 const PiecePriceStorage = StableBTreeMap<string, PiecePrice>(1);
 
@@ -54,7 +69,18 @@ export default Server(() => {
     const app = express();
     app.use(express.json());
 
-    //Regeister a new material
+    /**
+     * Registers a new material.
+     * @route POST /register-material
+     * @param {Object} req - Express request object.
+     * @param {string} req.body.name - Name of the material.
+     * @param {string} req.body.description - Description of the material.
+     * @param {Object} res - Express response object.
+     * @returns {Object} 200 - Material registered successfully.
+     * @returns {Object} 400 - Missing required fields.
+     * @returns {Object} 409 - Material already exists.
+     */
+
     app.post('/register-material', (req, res) => {
 
         const {name , description} = req.body
@@ -81,8 +107,17 @@ export default Server(() => {
 
     });
     
-    // registering the piece prices
-
+    /**
+     * Registers prices for a material.
+     * @route POST /register-material-prices/:id
+     * @param {Object} req - Express request object.
+     * @param {string} req.params.id - Material ID.
+     * @param {Array} req.body - Array of prices.
+     * @param {Object} res - Express response object.
+     * @returns {Object} 200 - Prices added successfully.
+     * @returns {Object} 400 - Missing required fields.
+     * @returns {Object} 409 - Prices for material already exist.
+     */
     app.post('/register-material-prices/:id', (req, res) => {
         
         const materialID = req.params.id;
@@ -105,7 +140,14 @@ export default Server(() => {
         }
     });
 
-    // now we are displaying all the materials.
+    /**
+     * Retrieves all materials.
+     * @route GET /materials
+     * @param {Object} req - Express request object.
+     * @param {Object} res - Express response object.
+     * @returns {Object} 200 - List of materials.
+     * @returns {Object} 404 - Materials not found.
+     */
     app.get('/materials', (req, res) => {
         const materials = MaterialTypeStorage.values();
         if(!materials){
@@ -115,6 +157,15 @@ export default Server(() => {
         }
     });
 
+    /**
+     * Retrieves a specific material by ID.
+     * @route GET /materials/:id
+     * @param {Object} req - Express request object.
+     * @param {string} req.params.id - Material ID.
+     * @param {Object} res - Express response object.
+     * @returns {Object} 200 - Material found.
+     * @returns {Object} 404 - Material not found.
+     */
     app.get('/materials/:id', (req, res) => {
 
         const materialID = req.params.id;
@@ -128,7 +179,16 @@ export default Server(() => {
         }
     });
 
-    // now we are posting piece prices with
+    /**
+     * Retrieves piece prices for a material.
+     * @route GET /materials/:id/piece-prices
+     * @param {Object} req - Express request object.
+     * @param {string} req.params.id - Material ID.
+     * @param {Object} res - Express response object.
+     * @returns {Object} 200 - Piece prices found.
+     * @returns {Object} 400 - Invalid material ID or material not found.
+     * @returns {Object} 404 - Prices not found.
+     */
     app.get('/materials/:id/piece-prices', (req, res) => {
 
         const materialID = req.params.id;
@@ -150,7 +210,15 @@ export default Server(() => {
         }
     });
 
-    // now we are deleting a material
+    /**
+     * Deletes a material and its piece prices.
+     * @route DELETE /remove/material/:id
+     * @param {Object} req - Express request object.
+     * @param {string} req.params.id - Material ID.
+     * @param {Object} res - Express response object.
+     * @returns {Object} 200 - Material deleted successfully.
+     * @returns {Object} 400 - Couldn't delete the material, not found.
+     */
     app.delete('/remove/material/:id', (req, res) => {
 
         const materialID = req.params.id;
@@ -173,7 +241,17 @@ export default Server(() => {
     
     });
 
-    // now we are up-dating a piece price 
+    /**
+     * Updates a piece price for a material.
+     * @route PUT /update/material/:id/piece
+     * @param {Object} req - Express request object.
+     * @param {string} req.params.id - Material ID.
+     * @param {number} req.body.size - Size of the piece.
+     * @param {number} req.body.price - New price for the specified size.
+     * @param {Object} res - Express response object.
+     * @returns {Object} 200 - Piece price updated successfully.
+     * @returns {Object} 400 - Couldn't find the material or piece price.
+     */
     app.put('/update/material/:id/piece', (req, res) => {
         const materialID = req.params.id;
         const {size, price} = req.body;
@@ -190,7 +268,17 @@ export default Server(() => {
     
     });
 
-    // now we are adding a piece price 
+    /**
+     * Adds a new piece price for a material.
+     * @route PUT /add/material/:id/piece
+     * @param {Object} req - Express request object.
+     * @param {string} req.params.id - Material ID.
+     * @param {number} req.body.size - Size of the piece.
+     * @param {number} req.body.price - New price for the specified size.
+     * @param {Object} res - Express response object.
+     * @returns {Object} 200 - Piece price added successfully.
+     * @returns {Object} 400 - Couldn't find the material or piece price.
+     */ 
     app.put('/add/material/:id/piece', (req, res) => {
         const materialID = req.params.id;
         const {size, price} = req.body;
@@ -206,7 +294,16 @@ export default Server(() => {
         }
     });
 
-    // now we are computing
+    /**
+     * Computes the optimal cuts to maximize profit.
+     * @route PUT /material/:id/optimize-cuts/:length
+     * @param {Object} req - Express request object.
+     * @param {string} req.params.id - Material ID.
+     * @param {string} req.params.length - Length of the material.
+     * @param {Object} res - Express response object.
+     * @returns {Object} 200 - Optimized cuts calculated successfully.
+     * @returns {Object} 400 - Couldn't find the material or material prices.
+     */
     app.put('/material/:id/optimize-cuts/:length', (req, res) => {
         
         const materialID = req.params.id;
@@ -240,6 +337,10 @@ export default Server(() => {
 });
 
 
+/**
+ * Gets the current date.
+ * @returns {Date} - The current date.
+ */
 function getCurrentDate() {
 
     const timestamp = new Number(ic.time());
@@ -248,6 +349,14 @@ function getCurrentDate() {
 
 }
 
+/**
+ * Updates the price of a piece for a specific material type.
+ * @param {string} materialTypeId - The ID of the material type.
+ * @param {number} size - The size of the piece.
+ * @param {number} newPrice - The new price for the specified size.
+ * @param {boolean} addPiece - Flag indicating if a new price entry should be added.
+ * @returns {boolean} - True if the price was updated or added, otherwise false.
+ */
 function updatePiecePrice(materialTypeId: string, size: number, newPrice: number, addPiece: boolean): boolean {
 
     if (addPiece){
@@ -264,6 +373,12 @@ function updatePiecePrice(materialTypeId: string, size: number, newPrice: number
     return false;
 }
 
+/**
+ * Computes the optimal cuts to maximize profit given the piece prices and length.
+ * @param {{ size: number; price: number }[]} prices - The array of size and price objects.
+ * @param {number} n - The length of the material.
+ * @returns {{ maxProfit: number, cuts: number[] }} - The maximum profit and the array of cuts.
+ */
 function cutting(prices: { size: number; price: number }[], n: number): { maxProfit: number, cuts: number[] } {
     // Create a price map for easier access
     const priceMap = new Map<number, number>();

@@ -1,6 +1,6 @@
 {
   "canisters": {
-    "message_board": {
+    "cutting_optimization": {
       "type": "custom",
       "main": "src/cutter.ts",
       "candid": "src/cutter.did",
