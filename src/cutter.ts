@@ -19,10 +19,14 @@ class PiecePrice {
     }
 
     // Method to update the price for a specific size
-    updatePrice(size: number, newPrice: number): boolean {
+    updatePrice(size: number, price: number, tag:boolean): boolean {
+        if(tag){
+           this.prices.push({size,price});
+           return true;
+        }
         const priceEntry = this.prices.find(p => p.size === size);
         if (priceEntry) {
-            priceEntry.price = newPrice;
+            priceEntry.price = price;
             return true;
         }
         return false;
@@ -151,7 +155,7 @@ export default Server(() => {
 
         const materialID = req.params.id;
         const deletedMaterial = MaterialTypeStorage.remove(materialID);
-        const pieceID = PiecePriceStorage.values().find(p => p.materialTypeId === materialID)
+        const pieceID = PiecePriceStorage.values().find(p => p.materialTypeId === materialID);
         
         if(pieceID){
             PiecePriceStorage.remove(pieceID?.id);
@@ -159,7 +163,7 @@ export default Server(() => {
         
         if ("None" in deletedMaterial) {
  
-            res.status(400).send(`couldn't delete a message with id=${materialID}. material not found`);
+            res.status(400).send(`couldn't delete a material with id=${materialID}. material not found`);
       
          } else {
       
@@ -170,14 +174,65 @@ export default Server(() => {
     });
 
     // now we are up-dating a piece price 
-    app.delete('/update/material/:id/piece', (req, res) => {
+    app.put('/update/material/:id/piece', (req, res) => {
         const materialID = req.params.id;
         const {size, price} = req.body;
 
         if(PiecePriceStorage.values().find(p => p.materialTypeId === materialID)){
-            res.status(400).send(`couldn't update a piece price with materialID=${materialID}. material price not found`);
+            res.status(400).send(`couldn't find a material with ID=${materialID}. material not found`);
+        }
+
+        if(updatePiecePrice(materialID, size, price,false)){
+            res.status(200).json(PiecePriceStorage.values().find(p => p.materialTypeId === materialID));
+        }else{
+            res.status(400).send(`couldn't update a piece price with materialID=${materialID}. piece price not found`);
         }
     
+    });
+
+    // now we are adding a piece price 
+    app.put('/add/material/:id/piece', (req, res) => {
+        const materialID = req.params.id;
+        const {size, price} = req.body;
+
+        if(PiecePriceStorage.values().find(p => p.materialTypeId === materialID)){
+            res.status(400).send(`couldn't find a material with ID=${materialID}. material not found`);
+        }
+
+        if(updatePiecePrice(materialID, size, price,true)){
+            res.status(200).json(PiecePriceStorage.values().find(p => p.materialTypeId === materialID));
+        }else{
+            res.status(400).send(`couldn't add a piece price with materialID=${materialID}. piece price not found`);
+        }
+    });
+
+    // now we are computing
+    app.put('/material/:id/optimize-cuts/:length', (req, res) => {
+        
+        const materialID = req.params.id;
+        const materialLength = req.params.length;
+
+        const materialExists = MaterialTypeStorage.values().find(p => p.id === materialID);
+        const pricesExist = PiecePriceStorage.values().find(p => p.materialTypeId === materialID);
+
+        if(materialExists){
+            if(pricesExist){
+
+                const results = cutting(pricesExist.prices,parseInt(materialLength))
+                res.status(200).json({material:materialExists.name,
+                    description: materialExists.description,
+                    results: results
+                });
+
+            }else{
+
+                res.status(400).send(`couldn't find material prices with ID=${materialID}. material prices not found`);
+            }
+        }else{
+
+            res.status(400).send(`couldn't find a material with ID=${materialID}. material not found`);
+        }
+
     });
 
     return app.listen();
@@ -193,16 +248,62 @@ function getCurrentDate() {
 
 }
 
-function updatePiecePrice(materialTypeId: string, size: number, newPrice: number): boolean {
-    const piecePrices = PiecePriceStorage.values().find(p => p.materialTypeId === materialTypeId);
-    if (piecePrices) {
-        const updated = piecePrices.updatePrice(size, newPrice);
+function updatePiecePrice(materialTypeId: string, size: number, newPrice: number, addPiece: boolean): boolean {
+
+    if (addPiece){
+        const piecePricesObject = PiecePriceStorage.values().find(p => p.materialTypeId === materialTypeId);
+    }
+    const piecePricesObject = PiecePriceStorage.values().find(p => p.materialTypeId === materialTypeId);
+    if (piecePricesObject) {
+        const updated = piecePricesObject.updatePrice(size, newPrice,false);
         if (updated) {
-            PiecePriceStorage.insert(piecePrices.id, piecePrices);
+            PiecePriceStorage.insert(piecePricesObject.id, piecePricesObject);
             return true;
         }
     }
     return false;
+}
+
+function cutting(prices: { size: number; price: number }[], n: number): { maxProfit: number, cuts: number[] } {
+    // Create a price map for easier access
+    const priceMap = new Map<number, number>();
+    for (const priceObj of prices) {
+        priceMap.set(priceObj.size, priceObj.price);
+    }
+
+    const memo: number[] = new Array(n + 1).fill(-1);
+    const cutsMemo: number[] = new Array(n + 1).fill(-1);
+
+    function maxProfit(length: number): number {
+        if (length === 0) return 0;
+        if (memo[length] !== -1) return memo[length];
+
+        let maxVal = Number.MIN_SAFE_INTEGER;
+        for (const size of priceMap.keys()) {
+            if (size <= length) {
+                const currentProfit = priceMap.get(size)! + maxProfit(length - size);
+                if (maxVal < currentProfit) {
+                    maxVal = currentProfit;
+                    cutsMemo[length] = size;
+                }
+            }
+        }
+
+        memo[length] = maxVal;
+        return maxVal;
+    }
+
+    const maxProfitValue = maxProfit(n);
+
+    // Reconstruct the cuts
+    const lengths: number[] = [];
+    let length = n;
+    while (length > 0) {
+        lengths.push(cutsMemo[length]);
+        length -= cutsMemo[length];
+    }
+
+    return { maxProfit: maxProfitValue, cuts: lengths };
 }
 
 
