@@ -1,7 +1,54 @@
 # Cutting Optimization Canister API Documentation
 
 ## Introduction
-The Cutting Optimization Canister API allows users to manage materials and their corresponding length prices to calculate maximum profit and efficient cuts. This API supports CRUD operations for materials and their prices, as well as endpoints for optimizing cuts for maximum profit.
+The Cutting Optimization Canister API is a specialized tool designed for businesses involved in the sale and production of rod-like products. It leverages smart contracts on the Internet Computer (ICP) platform to provide efficient management of materials and pricing information. This API enables businesses to optimize the cutting of materials to maximize profit margins while minimizing waste. Key features include the ability to add and delete materials, manage prices per length or piece, and perform advanced calculations for cutting optimization. By integrating with smart contracts, the API ensures transparency, security, and automation in managing materials and conducting optimization tasks. It caters specifically to businesses seeking to enhance operational efficiency and profitability in the management of 1D materials such as rods.
+
+## Purpose and Features:
+### Material Management: Allows users to manage various materials used in production, likely specifying attributes such as type of material and associated prices.
+
+### Price Management:
+Enables linking materials with their respective prices per length or piece. This feature helps in calculating costs and profits based on the dimensions of the rods or similar products.
+
+### Optimization Calculations: 
+Performs calculations to optimize the cutting of materials to maximize profit. This involves finding the most efficient way to cut rods or similar items from longer pieces, minimizing waste and maximizing the yield.
+
+### Smart Contracts on the ICP: 
+Indicates that the API utilizes smart contracts on the Internet Computer (ICP). Smart contracts provide transparency, security, and automation of transactions and operations related to material management and optimization.
+
+## Functionality Overview:
+### Adding Materials:
+Users can add new materials to the system and link them with their corresponding prices. This allows the API to dynamically adjust calculations based on the current pricing information.
+
+### Deleting Materials:
+Provides an endpoint to remove materials from the system. This could be useful for updating inventory or when materials are no longer in use.
+
+### Calculation of Maximum Profit:
+By integrating the price information with optimization algorithms, the API helps businesses determine the best way to cut materials to achieve maximum profitability.
+
+## Target Audience:
+### Businesses Selling Rod-like Products:
+Primarily targets businesses that manufacture or sell rod-shaped materials where efficient use of materials and accurate cost calculations are critical.
+
+## Tech Stack
+
+Here are the key technologies and tools we'll be using:
+
+- Internet Computer Protocol (ICP): ICP is a decentralized computing platform that facilitates the creation of software, computation, and data that can run on the public internet. It's the platform we'll be building our application on.
+- Azle: Azle is a TypeScript framework for creating and managing smart contracts, or "canisters," on the Internet Computer Protocol (ICP).
+- Node.js: Node.js is a JavaScript runtime that allows for the execution of JavaScript outside of a web browser. We'll be using Node.js version 18 for this tutorial.
+- Node Version Manager (nvm): Nvm is a tool that enables management and switching between different Node.js versions. We'll be using it to manage our Node.js environment.
+- DFX: DFX is the command-line interface for the Internet Computer. We'll be using it to create and manage our Azle project.
+- TypeScript: TypeScript is a typed superset of JavaScript that compiles to plain JavaScript. We'll be using it for writing our application's code, and our project will include a configuration file (tsconfig.json) for setting up the TypeScript compiler options.
+- Candid: Candid is an interface description language (IDL) used by Internet Computer for defining and describing the public interfaces of services, i.e., their methods and their input/output types. We'll be using Candid in our project to describe the interface of our canisters.
+ 
+
+## Benefits:
+### Cost Efficiency:
+Helps businesses reduce material wastage through optimized cutting strategies.
+### Profit Maximization: 
+Provides tools to maximize profit margins by considering both material costs and optimal cutting patterns.
+### Scalability and Flexibility:
+Can adapt to different types of rod-like materials and varying pricing structures.
 
 ## Getting Started
 To run the Cutting Optimization Canister API, follow these steps:
