@@ -26,7 +26,7 @@ To run the Cutting Optimization Canister API, follow these steps:
     ```sh
     dfx canister id <CANISTER_NAME>
     ```
-    <CANINSTER_NAME> is the name of your canister
+<CANINSTER_NAME> is the name of your canister
 
 
 ## Endpoints
@@ -56,16 +56,15 @@ To run the Cutting Optimization Canister API, follow these steps:
 
 #### Request Example:
 
-    ```sh
-    curl -X POST http://127.0.0.1:8000/register-material -H "Content-Type: application/json" -d '{"name":"steel rod","description":"this is a very thin steel used for construction. mainly foundation"}'
-
-    ```
+```sh
+curl -X POST http://127.0.0.1:8000/register-material -H "Content-Type: application/json" -d '{"name":"steel rod","description":"this is a very thin steel used for construction. mainly foundation"}'
+```
 
 #### Response
 
-    ```gherkin
-    {"message":"Material Regisstered successfully","materialID":"b5534879-cc3d-4a3e-b247-4f42e10dd788","materialName":"steel rod"}
-    ```
+```sh
+{"message":"Material Regisstered successfully","materialID":"b5534879-cc3d-4a3e-b247-4f42e10dd788","materialName":"steel rod"}
+```
     200 OK - Material Regisstered successfully.
     400 Bad Request - Missing required fields.
     409 Conflict - Material you are registering already exists
@@ -83,10 +82,9 @@ To run the Cutting Optimization Canister API, follow these steps:
 
 ### Request Example:
 
-    ```sh
-    curl -X POST http://127.0.0.1:8000//update/material/:id/piece -H "Content-Type: application/json" -d '{"size": 1,"price": 12}'
-
-    ```
+```sh
+curl -X POST http://127.0.0.1:8000//update/material/:id/piece -H "Content-Type: application/json" -d '{"size": 1,"price": 12}'
+```
     `id` is the `id` of the material you're updating the price for
 
 ### Response
@@ -107,17 +105,16 @@ To run the Cutting Optimization Canister API, follow these steps:
 
 ### Request Example:
 
-    ```sh
-    curl -X POST http://br5f7-7uaaa-aaaaa-qaaca-cai.localhost:8000/register-material-prices/b5534879-cc3d-4a3e-b247-4f42e10dd788 -H "Content-type: application/json" -d '{"prices":[{ size: 3, price: 9 },{ size: 6, price: 13 },{ size: 5, price: 11 },{ size: 2, price: 5 }]}'
-
-    ```
+```sh
+curl -X POST http://br5f7-7uaaa-aaaaa-qaaca-cai.localhost:8000/register-material-prices/b5534879-cc3d-4a3e-b247-4f42e10dd788 -H "Content-type: application/json" -d '{"prices":[{ size: 3, price: 9 },{ size: 6, price: 13 },{ size: 5, price: 11 },{ size: 2, price: 5 }]}'
+```
     `id` is the `id` of the material you're registering the prices for
 
 ### Response
 
-    ```gherkin
-    {"message":"Material Regisstered successfully","materialID":"b5534879-cc3d-4a3e-b247-4f42e10dd788","materialName":"steel rod"}
-    ```
+```sh
+{"message":"Material Regisstered successfully","materialID":"b5534879-cc3d-4a3e-b247-4f42e10dd788","materialName":"steel rod"}
+```
     200 OK - prices updated successfully.
     400 Bad Request - Missing required fields.
     409 Conflict - prices for the material already exists
