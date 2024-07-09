@@ -1,18 +1,19 @@
 import subprocess
 import os
+import time
+import requests
 
 CANISTER_ID = "bkyz2-fmaaa-aaaaa-qaaaq-cai"
-start_of_command = "curl -X"
-after_method = "http://bkyz2-fmaaa-aaaaa-qaaaq-cai.localhost:8000/"
+url_canister = "http://bkyz2-fmaaa-aaaaa-qaaaq-cai.localhost:8000/"
 
-def run_command(command):
+def run_command(command, background=False):
     try:
-        if( "dfx" in command):
+        if background:
             process = subprocess.Popen(command, shell=True, cwd=os.getcwd(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             return process
-        result = subprocess.run(command, capture_output=True, text=True, check=True, shell=True, cwd=os.getcwd())
-        return result.stdout
-       
+        else:
+            result = subprocess.run(command, capture_output=True, text=True, check=True, shell=True, cwd=os.getcwd())
+            return result.stdout
     except subprocess.CalledProcessError as e:
         print(f"An error occurred: {e}")
         return None
@@ -35,7 +36,7 @@ def register_material():
         description = input("please enter the description of the material:")
         if(name.isalpha() and len(name)!=0):
             break
-    return f"{start_of_command} POST {after_method} register-material -H \"Content-type: application/json\" -d " + '{\"name\": '+name+', \"description\": '+ description + '}'
+    return make_api_request(url_canister,"POST",{"name":name,"description":description})
 
 def register_material_prices():
     pass
@@ -81,11 +82,28 @@ def process_the_requests(command):
     elif "/material/" in command and "/optimize-cuts/" in command:
         print("Optimizing cuts...")
         return optimize()
-    elif "dfx deploy" in command:
-        return "dfx deploy"
     else:
         return show_help()
 
+def make_api_request(url, method="GET", data=None):
+    headers = {"Content-Type": "application/json"}
+    try:
+        if method == "POST":
+            response = requests.post(url, headers=headers, json=data)
+        elif method == "GET":
+            response = requests.get(url, headers=headers)
+        elif method == "PUT":
+            response = requests.put(url, headers=headers, json=data)
+        elif method == "DELETE":
+            response = requests.delete(url, headers=headers)
+        else:
+            raise ValueError("Invalid HTTP method")
+        
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"An error occurred: {e}")
+        return None
 
 def show_help():
     help_text = """
@@ -120,6 +138,7 @@ def run():
         if user_command.lower() == 'exit':
             break
 
+        
         # Run the command and get the output
         output = run_command(process_the_requests(user_command))
 
@@ -128,60 +147,29 @@ def run():
             run_command("dfx stop")
             print(output)
 
-def start_canister():
+def deploy_canister():
+    print("Deploying canister...")
+    output = run_command("dfx deploy",background=True)
+    print(output)
+    return "Canister deployed."
+    
 
-    print(run_command("dfx start --host 127.0.0.1:8000 --clean"))
+def start_local_replica():
+    print("Starting local Internet Computer replica...")
+    process = run_command("dfx start --host 127.0.0.1:8000 --clean", background=True)
+    time.sleep(10)  # Wait for the replica to start
+    print("Local replica started.")
+    return process
 
 if __name__ == "__main__":
-    start_canister()
     run()
     
-# import subprocess
-# import os
-# import time
-# import requests
 
-# def run_command(command, background=False):
-#     try:
-#         if background:
-#             process = subprocess.Popen(command, shell=True, cwd=os.getcwd(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-#             return process
-#         else:
-#             result = subprocess.run(command, capture_output=True, text=True, check=True, shell=True, cwd=os.getcwd())
-#             return result.stdout
-#     except subprocess.CalledProcessError as e:
-#         print(f"An error occurred: {e}")
-#         return None
 
-# def start_local_replica():
-#     print("Starting local Internet Computer replica...")
-#     process = run_command("dfx start --background", background=True)
-#     time.sleep(10)  # Wait for the replica to start
-#     print("Local replica started.")
-#     return process
+#
 
 # def deploy_canister():
 #     print("Deploying canister...")
 #     output = run_command("dfx deploy")
 #     print(output)
 #     print("Canister deployed.")
-
-# def make_api_request(url, method="GET", data=None):
-#     headers = {"Content-Type": "application/json"}
-#     try:
-#         if method == "POST":
-#             response = requests.post(url, headers=headers, json=data)
-#         elif method == "GET":
-#             response = requests.get(url, headers=headers)
-#         elif method == "PUT":
-#             response = requests.put(url, headers=headers, json=data)
-#         elif method == "DELETE":
-#             response = requests.delete(url, headers=headers)
-#         else:
-#             raise ValueError("Invalid HTTP method")
-        
-#         response.raise_for_status()
-#         return response.json()
-#     except requests.exceptions.RequestException as e:
-#         print(f"An error occurred: {e}")
-#         return None

@@ -104,7 +104,7 @@ To run the Cutting Optimization Canister API, follow these steps:
 #### Request Example:
 
 ```sh
-curl -X POST http://127.0.0.1:8000/register-material -H "Content-Type: application/json" -d '{"name":"steel rod","description":"this is a very thin steel used for construction. mainly foundation"}'
+curl -X POST http://bkyz2-fmaaa-aaaaa-qaaaq-cai.localhost:8000/register-material -H "Content-Type: application/json" -d '{"name":"steel rod","description":"this is a very thin steel used for construction. mainly foundation"}'
 ```
 
 #### Response
