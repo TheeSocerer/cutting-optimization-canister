@@ -1,9 +1,18 @@
 import subprocess
+import os
+
+CANISTER_ID = "bkyz2-fmaaa-aaaaa-qaaaq-cai"
+start_of_command = "curl -X"
+after_method = "http://bkyz2-fmaaa-aaaaa-qaaaq-cai.localhost:8000/"
 
 def run_command(command):
     try:
-        result = subprocess.run(command, capture_output=True, text=True, check=True, shell=True)
+        if( "dfx" in command):
+            process = subprocess.Popen(command, shell=True, cwd=os.getcwd(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            return process
+        result = subprocess.run(command, capture_output=True, text=True, check=True, shell=True, cwd=os.getcwd())
         return result.stdout
+       
     except subprocess.CalledProcessError as e:
         print(f"An error occurred: {e}")
         return None
@@ -17,41 +26,79 @@ def process_output(output):
     # Example task: Printing the first line
     if lines:
         print(f"First line: {lines[0]}")
+        
+def register_material():
+    name = ''
+    description = ''
+    while(True):
+        name = input("please enter the name of the material:")
+        description = input("please enter the description of the material:")
+        if(name.isalpha() and len(name)!=0):
+            break
+    return f"{start_of_command} POST {after_method} register-material -H \"Content-type: application/json\" -d " + '{\"name\": '+name+', \"description\": '+ description + '}'
+
+def register_material_prices():
+    pass
+def get_materials():
+    pass
+def get_one_material():
+    pass
+def get_material_prices():
+    pass
+def update_material_piece():
+    pass
+def add_material_piece():
+    pass
+def optimize():
+    pass
+def delete_material():
+    pass
+def delete_prices():
+    pass
 
 def process_the_requests(command):
+    
     if "/register-material" in command:
-        print("Registering material...")
+        return register_material()
     elif "/register-material-prices/" in command:
-        print("Registering material prices...")
+        return register_material_prices()
     elif "/materials" in command and "/materials/" not in command:
-        print("Retrieving all materials...")
-    elif "/materials/" in command and "/piece-prices" not in command:
-        print("Retrieving a material...")
+        return get_materials()
+    elif "/material" in command and "/piece-prices" not in command:
+        return get_one_material()
     elif "/materials/" in command and "/piece-prices" in command:
         print("Retrieving piece prices...")
+        return get_material_prices()
     elif "/remove/material/" in command:
         print("Deleting a material...")
+        return delete_material()
     elif "/update/material/" in command and "/piece" in command:
         print("Updating a piece price...")
+        return update_material_piece()
     elif "/add/material/" in command and "/piece" in command:
         print("Adding a piece price...")
+        return add_material_piece()
     elif "/material/" in command and "/optimize-cuts/" in command:
         print("Optimizing cuts...")
+        return optimize()
+    elif "dfx deploy" in command:
+        return "dfx deploy"
     else:
-        print("Unknown command.")
+        return show_help()
+
 
 def show_help():
     help_text = """
     Available commands:
     - /register-material
-    - /register-material-prices/:id
+    - /register-material-prices/
     - /materials
-    - /materials/:id
-    - /materials/:id/piece-prices
-    - /remove/material/:id
-    - /update/material/:id/piece
-    - /add/material/:id/piece
-    - /material/:id/optimize-cuts/:length
+    - /materials/
+    - /materials/piece-prices
+    - /remove/material/
+    - /update/material/piece
+    - /add/material/piece
+    - /material/optimize-cuts/
 
     id represents the id of the material.
     
@@ -62,7 +109,7 @@ def show_help():
     
     Type 'exit' to quit the program.
     """
-    print(help_text)
+    return help_text
 
 
 def run():
@@ -74,13 +121,67 @@ def run():
             break
 
         # Run the command and get the output
-        output = run_command(user_command)
+        output = run_command(process_the_requests(user_command))
 
         # Process the output if the command was successful
         if output:
-            process_output(output)
+            run_command("dfx stop")
+            print(output)
 
+def start_canister():
+
+    print(run_command("dfx start --host 127.0.0.1:8000 --clean"))
 
 if __name__ == "__main__":
+    start_canister()
     run()
     
+# import subprocess
+# import os
+# import time
+# import requests
+
+# def run_command(command, background=False):
+#     try:
+#         if background:
+#             process = subprocess.Popen(command, shell=True, cwd=os.getcwd(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+#             return process
+#         else:
+#             result = subprocess.run(command, capture_output=True, text=True, check=True, shell=True, cwd=os.getcwd())
+#             return result.stdout
+#     except subprocess.CalledProcessError as e:
+#         print(f"An error occurred: {e}")
+#         return None
+
+# def start_local_replica():
+#     print("Starting local Internet Computer replica...")
+#     process = run_command("dfx start --background", background=True)
+#     time.sleep(10)  # Wait for the replica to start
+#     print("Local replica started.")
+#     return process
+
+# def deploy_canister():
+#     print("Deploying canister...")
+#     output = run_command("dfx deploy")
+#     print(output)
+#     print("Canister deployed.")
+
+# def make_api_request(url, method="GET", data=None):
+#     headers = {"Content-Type": "application/json"}
+#     try:
+#         if method == "POST":
+#             response = requests.post(url, headers=headers, json=data)
+#         elif method == "GET":
+#             response = requests.get(url, headers=headers)
+#         elif method == "PUT":
+#             response = requests.put(url, headers=headers, json=data)
+#         elif method == "DELETE":
+#             response = requests.delete(url, headers=headers)
+#         else:
+#             raise ValueError("Invalid HTTP method")
+        
+#         response.raise_for_status()
+#         return response.json()
+#     except requests.exceptions.RequestException as e:
+#         print(f"An error occurred: {e}")
+#         return None
