@@ -175,6 +175,7 @@ export default Server(() => {
     });
 
     app.put('/add/material/:id/piece', (req: Request, res: Response) => {
+
         const materialID = req.params.id;
         const { size, price } = req.body;
 
