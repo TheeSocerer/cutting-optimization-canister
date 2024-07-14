@@ -252,7 +252,7 @@ export default Server(() => {
      * @returns {Object} 200 - Piece price updated successfully.
      * @returns {Object} 400 - Couldn't find the material or piece price.
      */
-    app.put('/update/material/:id/piece', (req, res) => {
+    app.post('/update/material/:id/piece', (req, res) => {
         const materialID = req.params.id;
         const {size, price} = req.body;
 
@@ -279,7 +279,7 @@ export default Server(() => {
      * @returns {Object} 200 - Piece price added successfully.
      * @returns {Object} 400 - Couldn't find the material or piece price.
      */ 
-    app.put('/add/material/:id/piece', (req, res) => {
+    app.post('/add/material/:id/piece', (req, res) => {
         const materialID = req.params.id;
         const {size, price} = req.body;
 
@@ -304,7 +304,7 @@ export default Server(() => {
      * @returns {Object} 200 - Optimized cuts calculated successfully.
      * @returns {Object} 400 - Couldn't find the material or material prices.
      */
-    app.put('/material/:id/optimize-cuts/:length', (req, res) => {
+    app.get('/material/:id/optimize-cuts/:length', (req, res) => {
         
         const materialID = req.params.id;
         const materialLength = req.params.length;
