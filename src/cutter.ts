@@ -1,17 +1,10 @@
 import { v4 as uuidv4 } from 'uuid';
-
 import { Server, StableBTreeMap, ic } from 'azle';
-
-import express from 'express';
-
+import express, { Request, Response } from 'express';
+import cors from 'cors';
 
 class PiecePrice {
-    /**
-     * Represents the price information for a material piece.
-     * @param {string} materialTypeId - The ID of the material type.
-     * @param {{ size: number; price: number }[]} prices - The array of size and price objects.
-     */
-    id:string;
+    id: string;
     materialTypeId: string;
     createdAt: Date;
     prices: { size: number; price: number }[];
@@ -23,17 +16,10 @@ class PiecePrice {
         this.createdAt = getCurrentDate();
     }
 
-    /**
-     * Updates the price for a specific size.
-     * @param {number} size - The size of the piece.
-     * @param {number} price - The new price for the specified size.
-     * @param {boolean} tag - Flag indicating if a new price entry should be added.
-     * @returns {boolean} - True if the price was updated or added, otherwise false.
-     */
-    updatePrice(size: number, price: number, tag:boolean): boolean {
-        if(tag){
-           this.prices.push({size,price});
-           return true;
+    updatePrice(size: number, price: number, addNew: boolean): boolean {
+        if (addNew) {
+            this.prices.push({ size, price });
+            return true;
         }
         const priceEntry = this.prices.find(p => p.size === size);
         if (priceEntry) {
@@ -45,16 +31,12 @@ class PiecePrice {
 }
 
 class MaterialType {
-    /**
-     * Represents a material type.
-     * @param {string} name - The name of the material type.
-     * @param {string} description - The description of the material type.
-     */
     id: string;
-    name:string;
+    name: string;
     description: string;
     createdAt: Date;
-    constructor(name: string, description: string){
+
+    constructor(name: string, description: string) {
         this.id = uuidv4();
         this.name = name;
         this.description = description;
@@ -68,361 +50,226 @@ const PiecePriceStorage = StableBTreeMap<string, PiecePrice>(1);
 export default Server(() => {
     const app = express();
     app.use(express.json());
+    app.use(cors());
 
-    /**
-     * Registers a new material.
-     * @route POST /register-material
-     * @param {Object} req - Express request object.
-     * @param {string} req.body.name - Name of the material.
-     * @param {string} req.body.description - Description of the material.
-     * @param {Object} res - Express response object.
-     * @returns {Object} 200 - Material registered successfully.
-     * @returns {Object} 400 - Missing required fields.
-     * @returns {Object} 409 - Material already exists.
-     */
+    app.post('/register-material', (req: Request, res: Response) => {
+        const { name, description } = req.body;
 
-    app.post('/register-material', (req, res) => {
-
-        const {name , description} = req.body
-
-        if(name === undefined){
+        if (!name || !description) {
             return res.status(400).json({ error: 'Missing required fields' });
         }
-        const material = new MaterialType(name,description);
-        if(!MaterialTypeStorage.values().find(p => p.name === name)){
-            //insert the material into the tree
-            MaterialTypeStorage.insert(material.id,material)
-            res.status(200).json({ message: 'Material Regisstered successfully',
-                materialID: MaterialTypeStorage.values().find(p => name)?.id,
-                materialName: MaterialTypeStorage.values().find(p => name)?.name
-            });
-            
-        }else {
-            res.status(409).json({error: "Material you are registering already exists",
-                materialID: MaterialTypeStorage.values().find(p => name)?.id,
-                materialName: MaterialTypeStorage.values().find(p => name)?.name
-            })
-        }
-     
 
+        if (MaterialTypeStorage.values().some(p => p.name === name)) {
+            const existingMaterial = MaterialTypeStorage.values().find(p => p.name === name);
+            return res.status(409).json({
+                error: 'Material already exists',
+                materialID: existingMaterial?.id,
+                materialName: existingMaterial?.name
+            });
+        }
+
+        const material = new MaterialType(name, description);
+        MaterialTypeStorage.insert(material.id, material);
+        res.status(200).json({
+            message: 'Material registered successfully',
+            materialID: material.id,
+            materialName: material.name
+        });
     });
-    
-    /**
-     * Registers prices for a material.
-     * @route POST /register-material-prices/:id
-     * @param {Object} req - Express request object.
-     * @param {string} req.params.id - Material ID.
-     * @param {Array} req.body - Array of prices.
-     * @param {Object} res - Express response object.
-     * @returns {Object} 200 - Prices added successfully.
-     * @returns {Object} 400 - Missing required fields.
-     * @returns {Object} 409 - Prices for material already exist.
-     */
-    app.post('/register-material-prices/:id', (req, res) => {
-        
+
+    app.post('/register-material-prices/:id', (req: Request, res: Response) => {
         const materialID = req.params.id;
         const prices = req.body;
-        if(prices === undefined){
-            return res.status(400).json({ error: 'Missing required fields prices' });
+
+        if (!Array.isArray(prices) || prices.some(p => typeof p.size !== 'number' || typeof p.price !== 'number')) {
+            return res.status(400).json({ error: 'Invalid prices format' });
         }
-        
-        
-        const materialObject = PiecePriceStorage.values().find(p => p.materialTypeId === materialID);
-        if(materialObject){
-            res.status(409).json({error: "Prices for Material already exists", 
-            prices:materialObject?.prices});
-        }else{
-            const piecePriceObject = new PiecePrice(materialID,prices);
-            PiecePriceStorage.insert(piecePriceObject.id,piecePriceObject);
-            res.status(200).json({message: "The price for pieces were succefully added",
-                body:piecePriceObject.prices
+
+        if (!MaterialTypeStorage.values().some(p => p.id === materialID)) {
+            return res.status(404).json({ error: 'Material not found' });
+        }
+
+        if (PiecePriceStorage.values().some(p => p.materialTypeId === materialID)) {
+            return res.status(409).json({
+                error: 'Prices for material already exist',
+                prices: PiecePriceStorage.values().find(p => p.materialTypeId === materialID)?.prices
             });
         }
+
+        const piecePrice = new PiecePrice(materialID, prices);
+        PiecePriceStorage.insert(piecePrice.id, piecePrice);
+        res.status(200).json({
+            message: 'Prices registered successfully',
+            prices: piecePrice.prices
+        });
     });
 
-    /**
-     * Retrieves all materials.
-     * @route GET /materials
-     * @param {Object} req - Express request object.
-     * @param {Object} res - Express response object.
-     * @returns {Object} 200 - List of materials.
-     * @returns {Object} 404 - Materials not found.
-     */
-    app.get('/materials', (req, res) => {
+    app.get('/materials', (req: Request, res: Response) => {
         const materials = MaterialTypeStorage.values();
-        if(!materials){
-            res.status(404).json({ message: "Material not found" });
-        }else{
-            res.status(200).json(materials);
+        if (!materials.length) {
+            return res.status(404).json({ message: 'No materials found' });
         }
+        res.status(200).json(materials);
     });
 
-    /**
-     * Retrieves a specific material by ID.
-     * @route GET /materials/:id
-     * @param {Object} req - Express request object.
-     * @param {string} req.params.id - Material ID.
-     * @param {Object} res - Express response object.
-     * @returns {Object} 200 - Material found.
-     * @returns {Object} 404 - Material not found.
-     */
-    app.get('/materials/:id', (req, res) => {
-
+    app.get('/materials/:id', (req: Request, res: Response) => {
         const materialID = req.params.id;
-        
-        const materials = MaterialTypeStorage.values().find(p => p.id === materialID);
-        
-        if(!materials){
-            res.status(404).json({ message: "Material not found" });
-        }else{
-            res.status(200).json(materials);
+        const material = MaterialTypeStorage.values().find(p => p.id === materialID);
+        if (!material) {
+            return res.status(404).json({ message: 'Material not found' });
         }
+        res.status(200).json(material);
     });
 
-    /**
-     * Retrieves piece prices for a material.
-     * @route GET /materials/:id/piece-prices
-     * @param {Object} req - Express request object.
-     * @param {string} req.params.id - Material ID.
-     * @param {Object} res - Express response object.
-     * @returns {Object} 200 - Piece prices found.
-     * @returns {Object} 400 - Invalid material ID or material not found.
-     * @returns {Object} 404 - Prices not found.
-     */
-    app.get('/materials/:id/piece-prices', (req, res) => {
-
+    app.get('/materials/:id/piece-prices', (req: Request, res: Response) => {
         const materialID = req.params.id;
-
-        if(MaterialTypeStorage.values().find(p => p.id === materialID)){
-            return res.status(400).json({ error: 'Invalid material ID or Material not found' });
+        const material = MaterialTypeStorage.values().find(p => p.id === materialID);
+        if (!material) {
+            return res.status(404).json({ message: 'Material not found' });
         }
 
-        const prices = PiecePriceStorage.values().find(p => p.id === materialID);
-        const materials = MaterialTypeStorage.values().find(p => p.id === materialID);
-
-        if(!prices){
-            res.status(404).json({ message: "Prices not found" });
-        }else{
-            res.status(200).json({name: materials?.name,
-                description: materials?.description,
-                prices: prices.prices
-            })
+        const piecePrices = PiecePriceStorage.values().find(p => p.materialTypeId === materialID);
+        if (!piecePrices) {
+            return res.status(404).json({ message: 'Piece prices not found' });
         }
+
+        res.status(200).json({
+            name: material.name,
+            description: material.description,
+            prices: piecePrices.prices
+        });
     });
 
-    /**
-     * Deletes a material and its piece prices.
-     * @route DELETE /remove/material/:id
-     * @param {Object} req - Express request object.
-     * @param {string} req.params.id - Material ID.
-     * @param {Object} res - Express response object.
-     * @returns {Object} 200 - Material deleted successfully.
-     * @returns {Object} 400 - Couldn't delete the material, not found.
-     */
-    app.delete('/remove/material/:id', (req, res) => {
-
+    app.delete('/remove/material/:id', (req: Request, res: Response) => {
         const materialID = req.params.id;
-        const deletedMaterial = MaterialTypeStorage.remove(materialID);
-        const pieceID = PiecePriceStorage.values().find(p => p.materialTypeId === materialID);
-        
-        if(pieceID){
-            PiecePriceStorage.remove(pieceID?.id);
+
+        const material = MaterialTypeStorage.remove(materialID);
+        const piecePrice = PiecePriceStorage.values().find(p => p.materialTypeId === materialID);
+        if (piecePrice) {
+            PiecePriceStorage.remove(piecePrice.id);
         }
-        
-        if ("None" in deletedMaterial) {
- 
-            res.status(400).send(`couldn't delete a material with id=${materialID}. material not found`);
-      
-         } else {
-      
-            res.json(deletedMaterial.Some);
-      
-         }
-    
+
+        if ("None" in material) {
+            return res.status(404).json({ message: `Material with ID=${materialID} not found` });
+        }
+
+        res.status(200).json(material.Some);
     });
 
-    /**
-     * Updates a piece price for a material.
-     * @route PUT /update/material/:id/piece
-     * @param {Object} req - Express request object.
-     * @param {string} req.params.id - Material ID.
-     * @param {number} req.body.size - Size of the piece.
-     * @param {number} req.body.price - New price for the specified size.
-     * @param {Object} res - Express response object.
-     * @returns {Object} 200 - Piece price updated successfully.
-     * @returns {Object} 400 - Couldn't find the material or piece price.
-     */
-    app.put('/update/material/:id/piece', (req, res) => {
+    app.put('/update/material/:id/piece', (req: Request, res: Response) => {
         const materialID = req.params.id;
-        const {size, price} = req.body;
+        const { size, price } = req.body;
 
-        if(PiecePriceStorage.values().find(p => p.materialTypeId === materialID)){
-            res.status(400).send(`couldn't find a material with ID=${materialID}. material not found`);
+        if (typeof size !== 'number' || typeof price !== 'number') {
+            return res.status(400).json({ error: 'Invalid size or price' });
         }
 
-        if(updatePiecePrice(materialID, size, price,false)){
-            res.status(200).json(PiecePriceStorage.values().find(p => p.materialTypeId === materialID));
-        }else{
-            res.status(400).send(`couldn't update a piece price with materialID=${materialID}. piece price not found`);
+        const piecePrice = PiecePriceStorage.values().find(p => p.materialTypeId === materialID);
+        if (!piecePrice) {
+            return res.status(404).json({ message: 'Piece prices not found' });
         }
-    
+
+        piecePrice.updatePrice(size, price, false);
+        PiecePriceStorage.insert(piecePrice.id, piecePrice);
+        res.status(200).json(piecePrice);
     });
 
-    /**
-     * Adds a new piece price for a material.
-     * @route PUT /add/material/:id/piece
-     * @param {Object} req - Express request object.
-     * @param {string} req.params.id - Material ID.
-     * @param {number} req.body.size - Size of the piece.
-     * @param {number} req.body.price - New price for the specified size.
-     * @param {Object} res - Express response object.
-     * @returns {Object} 200 - Piece price added successfully.
-     * @returns {Object} 400 - Couldn't find the material or piece price.
-     */ 
-    app.put('/add/material/:id/piece', (req, res) => {
+    app.put('/add/material/:id/piece', (req: Request, res: Response) => {
         const materialID = req.params.id;
-        const {size, price} = req.body;
+        const { size, price } = req.body;
 
-        if(PiecePriceStorage.values().find(p => p.materialTypeId === materialID)){
-            res.status(400).send(`couldn't find a material with ID=${materialID}. material not found`);
+        if (typeof size !== 'number' || typeof price !== 'number') {
+            return res.status(400).json({ error: 'Invalid size or price' });
         }
 
-        if(updatePiecePrice(materialID, size, price,true)){
-            res.status(200).json(PiecePriceStorage.values().find(p => p.materialTypeId === materialID));
-        }else{
-            res.status(400).send(`couldn't add a piece price with materialID=${materialID}. piece price not found`);
+        const piecePrice = PiecePriceStorage.values().find(p => p.materialTypeId === materialID);
+        if (!piecePrice) {
+            return res.status(404).json({ message: 'Piece prices not found' });
         }
+
+        piecePrice.updatePrice(size, price, true);
+        PiecePriceStorage.insert(piecePrice.id, piecePrice);
+        res.status(200).json(piecePrice);
     });
 
-    /**
-     * Computes the optimal cuts to maximize profit.
-     * @route PUT /material/:id/optimize-cuts/:length
-     * @param {Object} req - Express request object.
-     * @param {string} req.params.id - Material ID.
-     * @param {string} req.params.length - Length of the material.
-     * @param {Object} res - Express response object.
-     * @returns {Object} 200 - Optimized cuts calculated successfully.
-     * @returns {Object} 400 - Couldn't find the material or material prices.
-     */
-    app.put('/material/:id/optimize-cuts/:length', (req, res) => {
-        
+    app.put('/material/:id/optimize-cuts/:length', (req: Request, res: Response) => {
         const materialID = req.params.id;
-        const materialLength = req.params.length;
+        const materialLength = parseInt(req.params.length);
 
-        const materialExists = MaterialTypeStorage.values().find(p => p.id === materialID);
-        const pricesExist = PiecePriceStorage.values().find(p => p.materialTypeId === materialID);
-
-        if(materialExists){
-            if(pricesExist){
-
-                const results = cutting(pricesExist.prices,parseInt(materialLength))
-                res.status(200).json({material:materialExists.name,
-                    description: materialExists.description,
-                    results: results
-                });
-
-            }else{
-
-                res.status(400).send(`couldn't find material prices with ID=${materialID}. material prices not found`);
-            }
-        }else{
-
-            res.status(400).send(`couldn't find a material with ID=${materialID}. material not found`);
+        const material = MaterialTypeStorage.values().find(p => p.id === materialID);
+        if (!material) {
+            return res.status(404).json({ message: 'Material not found' });
         }
 
+        const piecePrices = PiecePriceStorage.values().find(p => p.materialTypeId === materialID);
+        if (!piecePrices) {
+            return res.status(404).json({ message: 'Piece prices not found' });
+        }
+
+        const results = optimizeCuts(piecePrices.prices, materialLength);
+        res.status(200).json({
+            material: material.name,
+            description: material.description,
+            results: results
+        });
     });
 
     return app.listen();
-
 });
 
-
-/**
- * Gets the current date.
- * @returns {Date} - The current date.
- */
-function getCurrentDate() {
-
-    const timestamp = new Number(ic.time());
-
-    return new Date(timestamp.valueOf() / 1000_000);
-
+function getCurrentDate(): Date {
+    const timestamp = Number(ic.time());
+    return new Date(timestamp / 1000_000);
 }
 
-/**
- * Updates the price of a piece for a specific material type.
- * @param {string} materialTypeId - The ID of the material type.
- * @param {number} size - The size of the piece.
- * @param {number} newPrice - The new price for the specified size.
- * @param {boolean} addPiece - Flag indicating if a new price entry should be added.
- * @returns {boolean} - True if the price was updated or added, otherwise false.
- */
 function updatePiecePrice(materialTypeId: string, size: number, newPrice: number, addPiece: boolean): boolean {
-
-    if (addPiece){
-        const piecePricesObject = PiecePriceStorage.values().find(p => p.materialTypeId === materialTypeId);
-    }
-    const piecePricesObject = PiecePriceStorage.values().find(p => p.materialTypeId === materialTypeId);
-    if (piecePricesObject) {
-        const updated = piecePricesObject.updatePrice(size, newPrice,false);
+    const piecePrice = PiecePriceStorage.values().find(p => p.materialTypeId === materialTypeId);
+    if (piecePrice) {
+        const updated = piecePrice.updatePrice(size, newPrice, addPiece);
         if (updated) {
-            PiecePriceStorage.insert(piecePricesObject.id, piecePricesObject);
+            PiecePriceStorage.insert(piecePrice.id, piecePrice);
             return true;
         }
     }
     return false;
 }
 
-/**
- * Computes the optimal cuts to maximize profit given the piece prices and length.
- * @param {{ size: number; price: number }[]} prices - The array of size and price objects.
- * @param {number} n - The length of the material.
- * @returns {{ maxProfit: number, cuts: number[] }} - The maximum profit and the array of cuts.
- */
-function cutting(prices: { size: number; price: number }[], n: number): { maxProfit: number, cuts: number[] } {
-    // Create a price map for easier access
+function optimizeCuts(prices: { size: number; price: number }[], length: number): { maxProfit: number, cuts: number[] } {
     const priceMap = new Map<number, number>();
     for (const priceObj of prices) {
         priceMap.set(priceObj.size, priceObj.price);
     }
 
-    const memo: number[] = new Array(n + 1).fill(-1);
-    const cutsMemo: number[] = new Array(n + 1).fill(-1);
+    const memo: number[] = new Array(length + 1).fill(-1);
+    const cutsMemo: number[] = new Array(length + 1).fill(-1);
 
-    function maxProfit(length: number): number {
-        if (length === 0) return 0;
-        if (memo[length] !== -1) return memo[length];
+    function maxProfit(n: number): number {
+        if (n === 0) return 0;
+        if (memo[n] !== -1) return memo[n];
 
         let maxVal = Number.MIN_SAFE_INTEGER;
-        for (const size of priceMap.keys()) {
-            if (size <= length) {
-                const currentProfit = priceMap.get(size)! + maxProfit(length - size);
+        for (const [size, price] of priceMap.entries()) {
+            if (size <= n) {
+                const currentProfit = price + maxProfit(n - size);
                 if (maxVal < currentProfit) {
                     maxVal = currentProfit;
-                    cutsMemo[length] = size;
+                    cutsMemo[n] = size;
                 }
             }
         }
 
-        memo[length] = maxVal;
+        memo[n] = maxVal;
         return maxVal;
     }
 
-    const maxProfitValue = maxProfit(n);
+    const maxProfitValue = maxProfit(length);
 
-    // Reconstruct the cuts
-    const lengths: number[] = [];
-    let length = n;
-    while (length > 0) {
-        lengths.push(cutsMemo[length]);
-        length -= cutsMemo[length];
+    const cuts: number[] = [];
+    let remainingLength = length;
+    while (remainingLength > 0) {
+        cuts.push(cutsMemo[remainingLength]);
+        remainingLength -= cutsMemo[remainingLength];
     }
 
-    return { maxProfit: maxProfitValue, cuts: lengths };
+    return { maxProfit: maxProfitValue, cuts };
 }
-
-
-
-
-
-
