@@ -7,6 +7,9 @@ import express from 'express';
 
 class PiecePrice {
     /**
+     * 
+
+     
      * Represents the price information for a material piece.
      * @param {string} materialTypeId - The ID of the material type.
      * @param {{ size: number; price: number }[]} prices - The array of size and price objects.
